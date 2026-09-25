@@ -42,4 +42,25 @@ describe('validateEnv', () => {
       validateEnv({ ...requiredEnv, LOW_STOCK_THRESHOLD: 'ten' }),
     ).toThrow('LOW_STOCK_THRESHOLD');
   });
+
+  describe('SWAGGER_ENABLED', () => {
+    it('defaults to enabled', () => {
+      expect(validateEnv(requiredEnv).SWAGGER_ENABLED).toBe(true);
+    });
+
+    it.each([
+      ['true', true],
+      ['false', false], // the trap: Boolean("false") === true
+    ])('parses "%s" as %s', (raw, expected) => {
+      expect(
+        validateEnv({ ...requiredEnv, SWAGGER_ENABLED: raw }).SWAGGER_ENABLED,
+      ).toBe(expected);
+    });
+
+    it.each(['yes', '1', ''])('rejects the ambiguous value "%s"', (raw) => {
+      expect(() =>
+        validateEnv({ ...requiredEnv, SWAGGER_ENABLED: raw }),
+      ).toThrow('SWAGGER_ENABLED must be "true" or "false"');
+    });
+  });
 });

@@ -4,7 +4,7 @@ Take-home task for Missan Computer. Reviewers judge **clear reasoning, sound dec
 Always follow `PLAN.md`. Work **one phase at a time**. Never start the next phase until the current phase's tests pass.
 
 ## Stack
-- **api/**: NestJS + Prisma + PostgreSQL + Redis (ioredis) + SSE (`@Sse()` + `@nestjs/event-emitter`)
+- **api/**: NestJS + Prisma + PostgreSQL + Redis (ioredis) + SSE (`@Sse()` + `@nestjs/event-emitter`) + Swagger (`@nestjs/swagger`, explicit decorators, no CLI plugin)
 - **web/**: Next.js (App Router) + TypeScript
 - **Infra**: Docker Compose (Postgres + Redis)
 - **Tests**: Jest (unit), Jest + Supertest (e2e, real Postgres/Redis), React Testing Library (web)
@@ -62,6 +62,7 @@ web 3000 · api 3001 · postgres 5432 · redis 6379
 - Low-stock threshold comes from `LOW_STOCK_THRESHOLD` (default 10).
 
 ## Don't
-- Don't add auth, Swagger, or extra features unless PLAN.md says so.
+- Don't add auth or extra features unless PLAN.md says so.
+- Swagger/OpenAPI (`/docs`, `/docs-json`) was added at the user's request. Keep it: every new DTO/response class needs `@ApiProperty` using the same constants as its validators, and every route needs an `operationId` (enforced by `test/docs.e2e-spec.ts`).
 - Don't use Redis for anything except the low-stock cache (the brief asks for ONE clear purpose).
 - Don't skip or delete failing tests to make a phase pass.

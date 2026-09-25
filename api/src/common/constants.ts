@@ -3,6 +3,11 @@ export const DEFAULT_PORT = 3001;
 export const DEFAULT_CORS_ORIGIN = 'http://localhost:3000';
 export const DEFAULT_LOW_STOCK_THRESHOLD = 10;
 export const DEFAULT_LOW_STOCK_CACHE_TTL_SECONDS = 30;
+export const DEFAULT_SWAGGER_ENABLED = true;
+
+// API documentation (OpenAPI)
+export const SWAGGER_PATH = 'docs';
+export const SWAGGER_JSON_PATH = 'docs-json';
 
 // Pagination
 export const PAGINATION_DEFAULT_LIMIT = 20;

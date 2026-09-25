@@ -1,5 +1,6 @@
-import { plainToInstance } from 'class-transformer';
+import { plainToInstance, Transform } from 'class-transformer';
 import {
+  IsBoolean,
   IsInt,
   IsNotEmpty,
   IsString,
@@ -12,6 +13,7 @@ import {
   DEFAULT_LOW_STOCK_CACHE_TTL_SECONDS,
   DEFAULT_LOW_STOCK_THRESHOLD,
   DEFAULT_PORT,
+  DEFAULT_SWAGGER_ENABLED,
 } from '../common/constants';
 
 const MAX_TCP_PORT = 65535;
@@ -42,6 +44,22 @@ export class EnvironmentVariables {
   @IsString()
   @IsNotEmpty()
   CORS_ORIGIN: string = DEFAULT_CORS_ORIGIN;
+
+  /** Serve OpenAPI docs at /docs. Disable where the API surface should not be public. */
+  @Transform(({ obj, key }: { obj: Record<string, unknown>; key: string }) =>
+    parseBooleanFlag(obj[key]),
+  )
+  @IsBoolean({ message: 'SWAGGER_ENABLED must be "true" or "false"' })
+  SWAGGER_ENABLED: boolean = DEFAULT_SWAGGER_ENABLED;
+}
+
+// Reads the raw env string: implicit conversion would turn "false" into true
+// (Boolean("false") === true). Unrecognised values are returned as-is so
+// validation rejects them instead of guessing.
+function parseBooleanFlag(value: unknown): unknown {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
 }
 
 /**

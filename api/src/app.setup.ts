@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CACHE_STATUS_HEADER } from './common/constants';
 import { EnvironmentVariables } from './config/env.validation';
+import { setupSwagger } from './swagger.setup';
 
 /**
  * HTTP-level setup that cannot live in AppModule. Shared by main.ts and the
@@ -22,4 +23,8 @@ export function configureApp(app: INestApplication): void {
 
   // Lets Prisma/Redis/SSE close cleanly on SIGTERM (docker stop, k8s).
   app.enableShutdownHooks();
+
+  if (config.get('SWAGGER_ENABLED', { infer: true })) {
+    setupSwagger(app);
+  }
 }
