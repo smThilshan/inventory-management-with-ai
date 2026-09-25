@@ -5,6 +5,7 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
 import { AppConfigModule } from './config/config.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
+import { RedisModule } from './redis/redis.module';
 import { StockMovementsModule } from './stock-movements/stock-movements.module';
 
 @Module({
@@ -12,6 +13,7 @@ import { StockMovementsModule } from './stock-movements/stock-movements.module';
     AppConfigModule,
     EventEmitterModule.forRoot(),
     PrismaModule,
+    RedisModule,
     ProductsModule,
     StockMovementsModule,
   ],

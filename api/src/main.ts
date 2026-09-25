@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { CACHE_STATUS_HEADER } from './common/constants';
 import { EnvironmentVariables } from './config/env.validation';
 
 async function bootstrap(): Promise<void> {
@@ -13,6 +14,8 @@ async function bootstrap(): Promise<void> {
       .get('CORS_ORIGIN', { infer: true })
       .split(',')
       .map((origin) => origin.trim()),
+    // Browsers hide non-safelisted response headers from JS unless exposed.
+    exposedHeaders: [CACHE_STATUS_HEADER],
   });
   // Lets Prisma/Redis close connections cleanly on SIGTERM (docker stop, k8s).
   app.enableShutdownHooks();

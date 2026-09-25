@@ -1,8 +1,13 @@
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
-import { OPENING_STOCK_NOTE } from '../common/constants';
+import { LOW_STOCK_MAX_ITEMS, OPENING_STOCK_NOTE } from '../common/constants';
 import { MovementType, Prisma, Product } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ProductResponse, toProductResponse } from './dto/product.response';
+import { LowStockCache } from './low-stock.cache';
 import { ProductsService } from './products.service';
+
+const DEFAULT_THRESHOLD = 10;
 
 const productRow = (overrides: Partial<Product> = {}): Product => ({
   id: '01990000-0000-7000-8000-000000000001',
@@ -23,6 +28,11 @@ describe('ProductsService', () => {
       findMany: jest.fn<Promise<Product[]>, [Prisma.ProductFindManyArgs]>(),
     },
   };
+  const lowStockCache = {
+    get: jest.fn<Promise<ProductResponse[] | null>, [number]>(),
+    set: jest.fn<Promise<void>, [number, ProductResponse[]]>(),
+    invalidateAll: jest.fn<Promise<void>, []>(),
+  };
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -30,9 +40,56 @@ describe('ProductsService', () => {
       providers: [
         ProductsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: LowStockCache, useValue: lowStockCache },
+        {
+          provide: ConfigService,
+          useValue: { get: () => DEFAULT_THRESHOLD },
+        },
       ],
     }).compile();
     service = moduleRef.get(ProductsService);
+  });
+
+  describe('findLowStock', () => {
+    it('HIT: serves from cache without touching the database', async () => {
+      const cached = [toProductResponse(productRow({ quantity: 2 }))];
+      lowStockCache.get.mockResolvedValue(cached);
+
+      const result = await service.findLowStock(5);
+
+      expect(result).toEqual({
+        threshold: 5,
+        items: cached,
+        cacheStatus: 'HIT',
+      });
+      expect(prisma.product.findMany).not.toHaveBeenCalled();
+    });
+
+    it('MISS: queries below the threshold, most urgent first, and fills the cache', async () => {
+      lowStockCache.get.mockResolvedValue(null);
+      prisma.product.findMany.mockResolvedValue([productRow({ quantity: 2 })]);
+
+      const result = await service.findLowStock(5);
+
+      expect(prisma.product.findMany).toHaveBeenCalledWith({
+        where: { quantity: { lt: 5 } },
+        orderBy: [{ quantity: 'asc' }, { id: 'asc' }],
+        take: LOW_STOCK_MAX_ITEMS,
+      });
+      expect(result.cacheStatus).toBe('MISS');
+      expect(result.items[0].price).toBe('19.99');
+      expect(lowStockCache.set).toHaveBeenCalledWith(5, result.items);
+    });
+
+    it('uses the configured default threshold when none is given', async () => {
+      lowStockCache.get.mockResolvedValue(null);
+      prisma.product.findMany.mockResolvedValue([]);
+
+      const result = await service.findLowStock();
+
+      expect(result.threshold).toBe(DEFAULT_THRESHOLD);
+      expect(lowStockCache.get).toHaveBeenCalledWith(DEFAULT_THRESHOLD);
+    });
   });
 
   describe('create', () => {
@@ -74,6 +131,17 @@ describe('ProductsService', () => {
       const { data } = prisma.product.create.mock.calls[0][0];
       expect(data.quantity).toBe(0);
       expect(data.movements).toBeUndefined();
+    });
+
+    it('invalidates the low-stock cache after the product is stored', async () => {
+      prisma.product.create.mockResolvedValue(productRow());
+
+      await service.create({ name: 'Keyboard', sku: 'KB-001', price: 10 });
+
+      expect(lowStockCache.invalidateAll).toHaveBeenCalledTimes(1);
+      expect(prisma.product.create.mock.invocationCallOrder[0]).toBeLessThan(
+        lowStockCache.invalidateAll.mock.invocationCallOrder[0],
+      );
     });
   });
 

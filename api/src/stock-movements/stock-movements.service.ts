@@ -74,7 +74,7 @@ export class StockMovementsService {
     });
 
     // Only reached once the transaction has committed.
-    this.publishStockUpdated(result);
+    await this.publishStockUpdated(result);
     return result;
   }
 
@@ -131,16 +131,19 @@ export class StockMovementsService {
       : new NotFoundException('Product not found');
   }
 
-  private publishStockUpdated({
+  private async publishStockUpdated({
     product,
     movement,
-  }: StockMovementResult): void {
+  }: StockMovementResult): Promise<void> {
     const event: StockUpdatedEvent = {
       productId: product.id,
       sku: product.sku,
       quantity: product.quantity,
       movement: toStockMovementResponse(movement),
     };
-    this.events.emit(STOCK_UPDATED_EVENT, event);
+    // Awaiting listeners (e.g. cache invalidation) gives the caller read-your-writes
+    // consistency. Listener errors are suppressed by @OnEvent, so a failing
+    // listener can never turn an already-committed movement into an error response.
+    await this.events.emitAsync(STOCK_UPDATED_EVENT, event);
   }
 }

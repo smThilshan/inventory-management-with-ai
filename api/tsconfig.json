@@ -20,6 +20,8 @@
     // DTO / config classes are populated by class-transformer, not constructors.
     "strictPropertyInitialization": false,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    // Explicit: TypeScript 6 (bundled with newer editors) no longer auto-includes @types.
+    "types": ["node", "jest"]
   }
 }

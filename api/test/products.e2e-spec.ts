@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { Paginated } from '../src/common/pagination/paginated';
 import { ProductResponse } from '../src/products/dto/product.response';
-import { createTestApp, resetDatabase, TestContext } from './utils/test-app';
+import { createTestApp, resetState, TestContext } from './utils/test-app';
 
 interface ErrorBody {
   statusCode: number;
@@ -23,7 +23,7 @@ describe('Products (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await resetDatabase(ctx.prisma);
+    await resetState(ctx);
   });
 
   afterAll(async () => {

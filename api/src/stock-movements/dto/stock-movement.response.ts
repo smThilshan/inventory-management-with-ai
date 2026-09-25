@@ -11,7 +11,8 @@ export interface StockMovementResponse {
   type: MovementType;
   quantity: number;
   note: string | null;
-  createdAt: Date;
+  /** ISO-8601 */
+  createdAt: string;
 }
 
 export interface StockMovementResultResponse {
@@ -28,7 +29,7 @@ export function toStockMovementResponse(
     type: movement.type,
     quantity: movement.quantity,
     note: movement.note,
-    createdAt: movement.createdAt,
+    createdAt: movement.createdAt.toISOString(),
   };
 }
 

@@ -23,3 +23,14 @@ export const MOVEMENT_NOTE_MAX_LENGTH = 255;
 export const MOVEMENT_HISTORY_LIMIT = 50;
 /** Upper bound of Product.quantity (Postgres INTEGER). */
 export const STOCK_QUANTITY_MAX = 2_147_483_647;
+
+// Low-stock cache (Redis)
+export const LOW_STOCK_CACHE_KEY_PREFIX = 'low-stock:';
+/** Keeps the response bounded; items are ordered most-urgent first. */
+export const LOW_STOCK_MAX_ITEMS = 100;
+/** SCAN batch size for invalidation: small enough never to block Redis. */
+export const CACHE_SCAN_BATCH_SIZE = 100;
+/** A slow Redis must not slow the API: give up and fall back to the DB. */
+export const REDIS_COMMAND_TIMEOUT_MS = 500;
+export const REDIS_CONNECT_TIMEOUT_MS = 2_000;
+export const CACHE_STATUS_HEADER = 'X-Cache';

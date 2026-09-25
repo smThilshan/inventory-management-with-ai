@@ -9,7 +9,7 @@ import {
   STOCK_UPDATED_EVENT,
   StockUpdatedEvent,
 } from '../src/stock-movements/events/stock-updated.event';
-import { createTestApp, resetDatabase, TestContext } from './utils/test-app';
+import { createTestApp, resetState, TestContext } from './utils/test-app';
 
 interface ErrorBody {
   message: string | string[];
@@ -28,7 +28,7 @@ describe('Stock movements (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await resetDatabase(ctx.prisma);
+    await resetState(ctx);
     received = [];
   });
 

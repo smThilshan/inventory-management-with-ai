@@ -8,8 +8,9 @@ export interface ProductResponse {
   quantity: number;
   /** Decimal as a fixed 2-dp string ("19.90") so clients never parse money into a float. */
   price: string;
-  createdAt: Date;
-  updatedAt: Date;
+  /** ISO-8601; strings (not Date) so the type stays true after JSON round-trips (cache, SSE). */
+  createdAt: string;
+  updatedAt: string;
 }
 
 // Fields are listed explicitly so new DB columns are never exposed by accident.
@@ -20,7 +21,7 @@ export function toProductResponse(product: Product): ProductResponse {
     sku: product.sku,
     quantity: product.quantity,
     price: product.price.toFixed(PRICE_DECIMAL_PLACES),
-    createdAt: product.createdAt,
-    updatedAt: product.updatedAt,
+    createdAt: product.createdAt.toISOString(),
+    updatedAt: product.updatedAt.toISOString(),
   };
 }

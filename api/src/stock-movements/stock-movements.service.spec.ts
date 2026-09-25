@@ -64,7 +64,9 @@ describe('StockMovementsService', () => {
       findUnique: jest.fn<Promise<unknown>, [Prisma.ProductFindUniqueArgs]>(),
     },
   };
-  const events = { emit: jest.fn<boolean, [string, unknown]>() };
+  const events = {
+    emitAsync: jest.fn<Promise<unknown[]>, [string, unknown]>(),
+  };
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -134,8 +136,8 @@ describe('StockMovementsService', () => {
         quantity: 3,
       });
 
-      expect(events.emit).toHaveBeenCalledTimes(1);
-      expect(events.emit).toHaveBeenCalledWith(STOCK_UPDATED_EVENT, {
+      expect(events.emitAsync).toHaveBeenCalledTimes(1);
+      expect(events.emitAsync).toHaveBeenCalledWith(STOCK_UPDATED_EVENT, {
         productId: PRODUCT_ID,
         sku: 'KB-001',
         quantity: 7,
@@ -160,7 +162,7 @@ describe('StockMovementsService', () => {
         new ConflictException('Insufficient stock'),
       );
       expect(tx.stockMovement.create).not.toHaveBeenCalled();
-      expect(events.emit).not.toHaveBeenCalled();
+      expect(events.emitAsync).not.toHaveBeenCalled();
     });
 
     it('throws 409 when IN would overflow the quantity column', async () => {
@@ -185,7 +187,7 @@ describe('StockMovementsService', () => {
         await expect(
           service.record({ productId: PRODUCT_ID, type, quantity: 1 }),
         ).rejects.toThrow(NotFoundException);
-        expect(events.emit).not.toHaveBeenCalled();
+        expect(events.emitAsync).not.toHaveBeenCalled();
       },
     );
 
@@ -204,7 +206,7 @@ describe('StockMovementsService', () => {
           quantity: 3,
         }),
       ).rejects.toThrow('commit failed');
-      expect(events.emit).not.toHaveBeenCalled();
+      expect(events.emitAsync).not.toHaveBeenCalled();
     });
   });
 
