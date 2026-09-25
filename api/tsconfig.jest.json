@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Jest runs CommonJS without ESM support, so dynamic import() in the generated
+    // Prisma client must be down-levelled to require(). Type-checking of tests
+    // is done separately by `npm run typecheck`.
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "resolvePackageJsonExports": false,
+    "ignoreDeprecations": "5.0"
+  }
+}

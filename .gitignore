@@ -27,3 +27,4 @@ PLAN.md
 
 # generated Prisma client (rebuilt by `prisma generate` on install)
 api/src/generated/
+!api/.env.test

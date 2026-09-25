@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { OPENING_STOCK_NOTE } from '../src/common/constants';
 import { MovementType, PrismaClient } from '../src/generated/prisma/client';
 
 interface SeedProduct {
@@ -28,8 +29,6 @@ const PRODUCTS: readonly SeedProduct[] = [
   { name: '1TB NVMe SSD', sku: 'SSD-NVME-1TB', quantity: 0, price: '79.99' },
   { name: 'HD Webcam', sku: 'CAM-HD-006', quantity: 22, price: '59.00' },
 ];
-
-const OPENING_STOCK_NOTE = 'Opening stock (seed)';
 
 async function seed(prisma: PrismaClient): Promise<void> {
   for (const { quantity, ...product } of PRODUCTS) {
