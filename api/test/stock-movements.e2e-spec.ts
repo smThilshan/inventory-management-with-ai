@@ -9,7 +9,12 @@ import {
   STOCK_UPDATED_EVENT,
   StockUpdatedEvent,
 } from '../src/stock-movements/events/stock-updated.event';
-import { createTestApp, resetState, TestContext } from './utils/test-app';
+import {
+  createTestApp,
+  listen,
+  resetState,
+  TestContext,
+} from './utils/test-app';
 
 interface ErrorBody {
   message: string | string[];
@@ -19,11 +24,15 @@ const UNKNOWN_PRODUCT_ID = '01990000-0000-7000-8000-000000000000';
 
 describe('Stock movements (e2e)', () => {
   let ctx: TestContext;
+  let baseUrl: string;
   let received: StockUpdatedEvent[];
   const recordEvent = (event: StockUpdatedEvent) => received.push(event);
 
   beforeAll(async () => {
     ctx = await createTestApp();
+    // A real listener: the concurrency tests fire truly parallel TCP requests,
+    // like real clients, instead of supertest re-binding the server per request.
+    baseUrl = await listen(ctx);
     ctx.app.get(EventEmitter2).on(STOCK_UPDATED_EVENT, recordEvent);
   });
 
@@ -37,7 +46,7 @@ describe('Stock movements (e2e)', () => {
     await ctx.app.close();
   });
 
-  const http = () => request(ctx.app.getHttpServer());
+  const http = () => request(baseUrl);
 
   const createProduct = async (quantity: number): Promise<ProductResponse> => {
     const res = await http()

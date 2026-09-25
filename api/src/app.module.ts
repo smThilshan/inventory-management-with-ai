@@ -3,6 +3,7 @@ import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { AppConfigModule } from './config/config.module';
+import { EventsModule } from './events/events.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProductsModule } from './products/products.module';
 import { RedisModule } from './redis/redis.module';
@@ -16,6 +17,7 @@ import { StockMovementsModule } from './stock-movements/stock-movements.module';
     RedisModule,
     ProductsModule,
     StockMovementsModule,
+    EventsModule,
   ],
   providers: [
     // Registered via DI (not in main.ts) so e2e tests booting AppModule get

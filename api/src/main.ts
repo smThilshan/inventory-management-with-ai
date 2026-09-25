@@ -2,25 +2,16 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { CACHE_STATUS_HEADER } from './common/constants';
+import { configureApp } from './app.setup';
 import { EnvironmentVariables } from './config/env.validation';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
-  const config = app.get(ConfigService<EnvironmentVariables, true>);
+  configureApp(app);
 
-  app.enableCors({
-    origin: config
-      .get('CORS_ORIGIN', { infer: true })
-      .split(',')
-      .map((origin) => origin.trim()),
-    // Browsers hide non-safelisted response headers from JS unless exposed.
-    exposedHeaders: [CACHE_STATUS_HEADER],
-  });
-  // Lets Prisma/Redis close connections cleanly on SIGTERM (docker stop, k8s).
-  app.enableShutdownHooks();
-
-  const port = config.get('PORT', { infer: true });
+  const port = app
+    .get(ConfigService<EnvironmentVariables, true>)
+    .get('PORT', { infer: true });
   await app.listen(port);
   Logger.log(`API listening on http://localhost:${port}`, 'Bootstrap');
 }

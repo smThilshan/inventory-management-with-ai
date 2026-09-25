@@ -9,6 +9,7 @@ import Redis from 'ioredis';
 import {
   REDIS_COMMAND_TIMEOUT_MS,
   REDIS_CONNECT_TIMEOUT_MS,
+  REDIS_DISCONNECT_TIMEOUT_MS,
 } from '../common/constants';
 import { EnvironmentVariables } from '../config/env.validation';
 
@@ -32,6 +33,7 @@ export class RedisService
       maxRetriesPerRequest: 0,
       commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
       connectTimeout: REDIS_CONNECT_TIMEOUT_MS,
+      disconnectTimeout: REDIS_DISCONNECT_TIMEOUT_MS,
     });
 
     // Log state transitions only, not every reconnect attempt, to avoid log floods.

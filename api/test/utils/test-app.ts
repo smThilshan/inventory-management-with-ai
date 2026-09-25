@@ -1,7 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
+import { Server } from 'node:http';
+import { AddressInfo } from 'node:net';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
+import { configureApp } from '../../src/app.setup';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { RedisService } from '../../src/redis/redis.service';
 
@@ -23,6 +26,7 @@ export async function createTestApp(
   ).compile();
 
   const app = moduleRef.createNestApplication<INestApplication<App>>();
+  configureApp(app);
   await app.init();
 
   return {
@@ -30,6 +34,13 @@ export async function createTestApp(
     prisma: app.get(PrismaService),
     redis: app.get(RedisService),
   };
+}
+
+/** Starts a real listener (needed for streaming clients) and returns its base URL. */
+export async function listen({ app }: TestContext): Promise<string> {
+  await app.listen(0);
+  const { port } = (app.getHttpServer() as Server).address() as AddressInfo;
+  return `http://127.0.0.1:${port}`;
 }
 
 /** Clears Postgres test data and the test Redis DB (never the dev DB 0). */

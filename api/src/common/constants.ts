@@ -33,4 +33,15 @@ export const CACHE_SCAN_BATCH_SIZE = 100;
 /** A slow Redis must not slow the API: give up and fall back to the DB. */
 export const REDIS_COMMAND_TIMEOUT_MS = 500;
 export const REDIS_CONNECT_TIMEOUT_MS = 2_000;
+/**
+ * ioredis arms this timer on disconnect and only clears it on the socket's
+ * 'close' event, which never comes if the socket already died (Redis down):
+ * shutdown would stall for the full default of 2s. A cache has nothing to flush.
+ */
+export const REDIS_DISCONNECT_TIMEOUT_MS = 100;
 export const CACHE_STATUS_HEADER = 'X-Cache';
+
+// Server-Sent Events
+/** Below the ~30-60s idle timeout of common proxies/load balancers. */
+export const SSE_HEARTBEAT_INTERVAL_MS = 25_000;
+export const SSE_HEARTBEAT_EVENT = 'heartbeat';
