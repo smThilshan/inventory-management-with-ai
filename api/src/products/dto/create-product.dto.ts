@@ -1,4 +1,3 @@
-import { Transform } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
@@ -18,12 +17,10 @@ import {
   PRODUCT_SKU_MAX_LENGTH,
   PRODUCT_SKU_PATTERN,
 } from '../../common/constants';
-
-const trim = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
+import { Trim } from '../../common/transforms/trim.transform';
 
 export class CreateProductDto {
-  @Transform(trim)
+  @Trim()
   @IsString()
   @IsNotEmpty()
   @MaxLength(PRODUCT_NAME_MAX_LENGTH)

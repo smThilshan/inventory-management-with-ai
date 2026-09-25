@@ -18,3 +18,8 @@ export const PRICE_DECIMAL_PLACES = 2;
 
 // Stock ledger
 export const OPENING_STOCK_NOTE = 'Opening stock';
+export const MOVEMENT_MAX_QUANTITY = 1_000_000;
+export const MOVEMENT_NOTE_MAX_LENGTH = 255;
+export const MOVEMENT_HISTORY_LIMIT = 50;
+/** Upper bound of Product.quantity (Postgres INTEGER). */
+export const STOCK_QUANTITY_MAX = 2_147_483_647;
