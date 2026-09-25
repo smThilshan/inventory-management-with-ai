@@ -30,9 +30,11 @@ Always follow `PLAN.md`. Work **one phase at a time**. Never start the next phas
 │   │   └── events/           # SSE controller + stream service
 │   └── test/                 # e2e specs
 └── web/
-    ├── app/ (page.tsx, layout.tsx)
-    ├── components/ (ProductTable.tsx, MovementForm.tsx)
-    └── lib/ (api.ts, types.ts)
+    ├── app/ (page.tsx, layout.tsx, error.tsx, loading.tsx)
+    ├── components/ (InventoryDashboard.tsx, ProductTable.tsx, MovementForm.tsx, LowStockPanel.tsx, ConnectionStatus.tsx)
+    ├── hooks/ (useStockStream.ts — the single EventSource, useRecentlyChanged.ts)
+    ├── lib/ (api.ts, types.ts, inventory.ts — pure reducer, snapshot.ts, constants.ts)
+    └── test/ (mock EventSource, mock fetch, fixtures)
 ```
 
 ## Ports
