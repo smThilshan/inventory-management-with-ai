@@ -1,0 +1,45 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+/// quantity >= 0 and price > 0 are enforced by CHECK constraints in the init migration.
+model Product {
+  id        String   @id @default(uuid(7)) @db.Uuid
+  name      String   @db.VarChar(120)
+  sku       String   @unique @db.VarChar(32)
+  quantity  Int      @default(0)
+  price     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  movements StockMovement[]
+
+  @@index([quantity])
+}
+
+/// Append-only ledger: every change to Product.quantity writes one row here.
+/// quantity > 0 is enforced by a CHECK constraint; direction comes from `type`.
+model StockMovement {
+  id        String       @id @default(uuid(7)) @db.Uuid
+  productId String       @db.Uuid
+  type      MovementType
+  quantity  Int
+  note      String?      @db.VarChar(255)
+  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+
+  // Restrict: deleting a product must never silently erase its stock history.
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([productId, createdAt])
+}

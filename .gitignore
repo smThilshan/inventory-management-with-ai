@@ -24,3 +24,6 @@ coverage/
 
 # local planning notes (not part of the submission)
 PLAN.md
+
+# generated Prisma client (rebuilt by `prisma generate` on install)
+api/src/generated/
