@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   LOW_STOCK_MAX_ITEMS,
   OPENING_STOCK_NOTE,
@@ -13,6 +14,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { LowStockResult } from './dto/low-stock.response';
 import { toProductResponse } from './dto/product.response';
+import { PRODUCT_CREATED_EVENT } from './events/product-created.event';
 import { LowStockCache } from './low-stock.cache';
 
 @Injectable()
@@ -22,6 +24,7 @@ export class ProductsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly lowStockCache: LowStockCache,
+    private readonly events: EventEmitter2,
     config: ConfigService<EnvironmentVariables, true>,
   ) {
     this.defaultLowStockThreshold = config.get('LOW_STOCK_THRESHOLD', {
@@ -58,6 +61,11 @@ export class ProductsService {
 
     // Awaited so the caller's next low-stock read already includes the new product.
     await this.lowStockCache.invalidateAll();
+    // After commit: lets every open window (dashboard, sale form) show it live.
+    await this.events.emitAsync(
+      PRODUCT_CREATED_EVENT,
+      toProductResponse(product),
+    );
     return product;
   }
 

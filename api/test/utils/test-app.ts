@@ -1,10 +1,13 @@
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModuleBuilder } from '@nestjs/testing';
+import { rm } from 'node:fs/promises';
 import { Server } from 'node:http';
 import { AddressInfo } from 'node:net';
+import { basename, resolve } from 'node:path';
 import { App } from 'supertest/types';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/app.setup';
+import { InvoiceSettings } from '../../src/invoices/invoice-settings';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { RedisService } from '../../src/redis/redis.service';
 
@@ -43,13 +46,24 @@ export async function listen({ app }: TestContext): Promise<string> {
   return `http://127.0.0.1:${port}`;
 }
 
-/** Clears Postgres test data and the test Redis DB (never the dev DB 0). */
+/** Only a directory with this name is ever deleted by tests. */
+const TEST_STORAGE_DIR_NAME = 'invoices-test';
+
+/** Clears Postgres test data, the test Redis DB (never the dev DB 0) and test PDFs. */
 export async function resetState({
+  app,
   prisma,
   redis,
 }: TestContext): Promise<void> {
-  await prisma.$executeRaw`TRUNCATE TABLE "StockMovement", "Product" CASCADE`;
+  // Listed explicitly: CASCADE only follows FKs *into* truncated tables, so
+  // Invoice/InvoiceSequence would otherwise survive between tests.
+  await prisma.$executeRaw`TRUNCATE TABLE "StockMovement", "InvoiceLine", "Invoice", "InvoiceSequence", "Product" CASCADE`;
   if (redis.status === 'ready') {
     await redis.flushdb();
+  }
+  // Guarded: a misconfigured env must never make a test delete real invoice PDFs.
+  const storageDir = resolve(app.get(InvoiceSettings).storageDir);
+  if (basename(storageDir) === TEST_STORAGE_DIR_NAME) {
+    await rm(storageDir, { recursive: true, force: true });
   }
 }

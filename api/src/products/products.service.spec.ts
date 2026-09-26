@@ -1,9 +1,11 @@
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Test } from '@nestjs/testing';
 import { LOW_STOCK_MAX_ITEMS, OPENING_STOCK_NOTE } from '../common/constants';
 import { MovementType, Prisma, Product } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ProductResponse, toProductResponse } from './dto/product.response';
+import { PRODUCT_CREATED_EVENT } from './events/product-created.event';
 import { LowStockCache } from './low-stock.cache';
 import { ProductsService } from './products.service';
 
@@ -33,6 +35,9 @@ describe('ProductsService', () => {
     set: jest.fn<Promise<void>, [number, ProductResponse[]]>(),
     invalidateAll: jest.fn<Promise<void>, []>(),
   };
+  const events = {
+    emitAsync: jest.fn<Promise<unknown[]>, [string, unknown]>(),
+  };
 
   beforeEach(async () => {
     jest.resetAllMocks();
@@ -41,6 +46,7 @@ describe('ProductsService', () => {
         ProductsService,
         { provide: PrismaService, useValue: prisma },
         { provide: LowStockCache, useValue: lowStockCache },
+        { provide: EventEmitter2, useValue: events },
         {
           provide: ConfigService,
           useValue: { get: () => DEFAULT_THRESHOLD },
@@ -131,6 +137,32 @@ describe('ProductsService', () => {
       const { data } = prisma.product.create.mock.calls[0][0];
       expect(data.quantity).toBe(0);
       expect(data.movements).toBeUndefined();
+    });
+
+    it('publishes product.created with the API representation after it is stored', async () => {
+      const row = productRow({ quantity: 5 });
+      prisma.product.create.mockResolvedValue(row);
+
+      await service.create({
+        name: 'Keyboard',
+        sku: 'KB-001',
+        price: 19.99,
+        quantity: 5,
+      });
+
+      expect(events.emitAsync).toHaveBeenCalledWith(
+        PRODUCT_CREATED_EVENT,
+        toProductResponse(row),
+      );
+    });
+
+    it('publishes nothing when the product cannot be stored (e.g. duplicate SKU)', async () => {
+      prisma.product.create.mockRejectedValue(new Error('P2002'));
+
+      await expect(
+        service.create({ name: 'Keyboard', sku: 'KB-001', price: 10 }),
+      ).rejects.toThrow('P2002');
+      expect(events.emitAsync).not.toHaveBeenCalled();
     });
 
     it('invalidates the low-stock cache after the product is stored', async () => {

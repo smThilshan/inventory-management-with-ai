@@ -1,20 +1,38 @@
 import type {
   ApiErrorBody,
+  CreateProductInput,
+  CreatePurchaseInput,
+  CreateSaleInput,
   CreateStockMovementInput,
+  Invoice,
+  InvoiceFilters,
+  InvoicePage,
+  InvoicingSettings,
   LowStockList,
+  Product,
   ProductPage,
   StockMovementResult,
+  StockShortage,
 } from './types';
 
 // Must be referenced literally: Next.js inlines NEXT_PUBLIC_* at build time
 // and cannot inline a dynamic lookup such as process.env[name].
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-/** An HTTP error from the API, carrying its user-facing message. */
+/** Structured details some errors carry, so forms can point at the failing lines. */
+export interface ApiErrorDetails {
+  /** 409 on a sale: every line that lacks stock. */
+  shortages?: StockShortage[];
+  /** 404 on a purchase/sale: every unknown product id. */
+  productIds?: string[];
+}
+
+/** An HTTP error from the API, carrying its user-facing message and details. */
 export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    readonly details: ApiErrorDetails = {},
   ) {
     super(message);
     this.name = 'ApiError';
@@ -29,15 +47,22 @@ function apiUrl(path: string): string {
 }
 
 /** Validation errors arrive as a list; show them as one readable sentence. */
-async function readErrorMessage(response: Response): Promise<string> {
+async function toApiError(response: Response): Promise<ApiError> {
   try {
-    const { message } = (await response.json()) as Partial<ApiErrorBody>;
-    if (Array.isArray(message)) return message.join('. ');
-    if (typeof message === 'string') return message;
+    const body = (await response.json()) as Partial<ApiErrorBody> & ApiErrorDetails;
+    const message = Array.isArray(body.message)
+      ? body.message.join('. ')
+      : typeof body.message === 'string'
+        ? body.message
+        : `Request failed (${response.status})`;
+    return new ApiError(response.status, message, {
+      shortages: body.shortages,
+      productIds: body.productIds,
+    });
   } catch {
-    // Not JSON (e.g. a proxy error page): fall through to a generic message.
+    // Not JSON (e.g. a proxy error page).
+    return new ApiError(response.status, `Request failed (${response.status})`);
   }
-  return `Request failed (${response.status})`;
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -52,22 +77,47 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   });
   if (!response.ok) {
-    throw new ApiError(response.status, await readErrorMessage(response));
+    throw await toApiError(response);
   }
   return (await response.json()) as T;
 }
 
+const post = <T>(path: string, body: unknown) =>
+  request<T>(path, { method: 'POST', body: JSON.stringify(body) });
+
+function query(params: Record<string, string | number | undefined>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined) search.set(key, String(value));
+  }
+  const text = search.toString();
+  return text ? `?${text}` : '';
+}
+
 export const api = {
   listProducts: (limit: number) =>
-    request<ProductPage>(`/products?limit=${limit}`),
+    request<ProductPage>(`/products${query({ limit })}`),
+
+  createProduct: (input: CreateProductInput) => post<Product>('/products', input),
 
   listLowStock: () => request<LowStockList>('/products/low-stock'),
 
   createStockMovement: (input: CreateStockMovementInput) =>
-    request<StockMovementResult>('/stock-movements', {
-      method: 'POST',
-      body: JSON.stringify(input),
-    }),
+    post<StockMovementResult>('/stock-movements', input),
+
+  getInvoicingSettings: () => request<InvoicingSettings>('/invoicing/settings'),
+
+  createPurchase: (input: CreatePurchaseInput) =>
+    post<Invoice>('/purchases', input),
+
+  createSale: (input: CreateSaleInput) => post<Invoice>('/sales', input),
+
+  listInvoices: (
+    filters: InvoiceFilters & { limit?: number; cursor?: string } = {},
+  ) => request<InvoicePage>(`/invoices${query({ ...filters })}`),
+
+  /** Opened directly by the browser (new tab), so it is a URL, not a fetch. */
+  invoicePdfUrl: (id: string) => apiUrl(`/invoices/${id}/pdf`),
 
   stockEventsUrl: () => apiUrl('/events/stock'),
 };

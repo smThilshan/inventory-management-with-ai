@@ -1,10 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { MovementType, StockMovement } from '../../generated/prisma/client';
+import {
+  MovementReason,
+  MovementType,
+  StockMovement,
+} from '../../generated/prisma/client';
 import {
   ProductResponse,
   toProductResponse,
 } from '../../products/dto/product.response';
-import type { StockMovementResult } from '../stock-movements.service';
+import type { StockMovementResult } from '../stock-ledger.service';
 
 export class StockMovementResponse {
   @ApiProperty({ format: 'uuid' })
@@ -18,6 +22,16 @@ export class StockMovementResponse {
 
   @ApiProperty({ type: 'integer', minimum: 1, example: 3 })
   quantity: number;
+
+  @ApiProperty({
+    enum: MovementReason,
+    enumName: 'MovementReason',
+    description: 'PURCHASE/SALE link to an invoice; ADJUSTMENT never does.',
+  })
+  reason: MovementReason;
+
+  @ApiProperty({ type: String, format: 'uuid', nullable: true })
+  invoiceId: string | null;
 
   @ApiProperty({ type: String, nullable: true, example: 'Order #1042' })
   note: string | null;
@@ -54,6 +68,8 @@ export function toStockMovementResponse(
     productId: movement.productId,
     type: movement.type,
     quantity: movement.quantity,
+    reason: movement.reason,
+    invoiceId: movement.invoiceId,
     note: movement.note,
     createdAt: movement.createdAt.toISOString(),
   };

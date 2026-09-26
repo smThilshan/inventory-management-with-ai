@@ -11,6 +11,7 @@ import {
 } from '@/lib/inventory';
 import { fetchInventorySnapshot } from '@/lib/snapshot';
 import type { StockUpdatedEvent } from '@/lib/types';
+import { AddProductDialog } from './AddProductDialog';
 import { ConnectionStatus } from './ConnectionStatus';
 import { LowStockPanel } from './LowStockPanel';
 import { MovementForm } from './MovementForm';
@@ -27,6 +28,11 @@ export function InventoryDashboard({ initialSnapshot }: { initialSnapshot: Inven
   const activeResync = useRef<Resync | null>(null);
 
   const status = useStockStream({
+    onProductCreated: (product) => {
+      dispatch({ type: 'productCreated', product });
+      markChanged(product.id);
+    },
+
     onUpdate: (event) => {
       dispatch({ type: 'stockUpdated', event });
       markChanged(event.productId);
@@ -62,7 +68,10 @@ export function InventoryDashboard({ initialSnapshot }: { initialSnapshot: Inven
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Inventory</h1>
           <p className="text-sm text-slate-500">Stock levels update live across every open window.</p>
         </div>
-        <ConnectionStatus status={status} />
+        <div className="flex items-center gap-3">
+          <ConnectionStatus status={status} />
+          <AddProductDialog />
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-3">

@@ -4,6 +4,12 @@ export const DEFAULT_CORS_ORIGIN = 'http://localhost:3000';
 export const DEFAULT_LOW_STOCK_THRESHOLD = 10;
 export const DEFAULT_LOW_STOCK_CACHE_TTL_SECONDS = 30;
 export const DEFAULT_SWAGGER_ENABLED = true;
+export const DEFAULT_TAX_RATE = '0';
+export const DEFAULT_CURRENCY = 'AED';
+export const DEFAULT_INVOICE_DUE_DAYS = 30;
+export const DEFAULT_INVOICE_STORAGE_DIR = './storage/invoices';
+/** Defines "today" for invoice dates (UAE business, AED currency). */
+export const DEFAULT_BUSINESS_TIMEZONE = 'Asia/Dubai';
 
 // API documentation (OpenAPI)
 export const SWAGGER_PATH = 'docs';
@@ -50,3 +56,16 @@ export const CACHE_STATUS_HEADER = 'X-Cache';
 /** Below the ~30-60s idle timeout of common proxies/load balancers. */
 export const SSE_HEARTBEAT_INTERVAL_MS = 25_000;
 export const SSE_HEARTBEAT_EVENT = 'heartbeat';
+
+// Invoicing
+export const INVOICE_MAX_LINES = 50;
+export const COUNTERPARTY_NAME_MIN_LENGTH = 2;
+export const COUNTERPARTY_NAME_MAX_LENGTH = 120;
+/** Per-unit cap, mirroring the product price column. */
+export const INVOICE_UNIT_PRICE_MAX = 99_999_999.99;
+/** Largest amount a Decimal(12,2) invoice column can hold. */
+export const INVOICE_AMOUNT_MAX = '9999999999.99';
+/** Calendar date as sent by clients: YYYY-MM-DD. */
+export const CALENDAR_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+/** Up to 50 lines, each an UPDATE + INSERT, possibly waiting on row locks. */
+export const INVOICE_TRANSACTION_TIMEOUT_MS = 15_000;

@@ -8,19 +8,19 @@ import {
   SUCCESS_MESSAGE_MS,
 } from '@/lib/constants';
 import type { MovementType, Product } from '@/lib/types';
+import { inputClass } from '@/lib/ui';
 
 type Feedback = { kind: 'success' | 'error'; message: string } | null;
 
 const MOVEMENT_TYPES: { value: MovementType; label: string }[] = [
-  { value: 'IN', label: 'IN (restock)' },
-  { value: 'OUT', label: 'OUT (sale)' },
+  { value: 'IN', label: 'IN (add)' },
+  { value: 'OUT', label: 'OUT (remove)' },
 ];
 
-const inputClass =
-  'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:bg-slate-50';
-
 /**
- * Records a movement. It deliberately does NOT update the table: the change
+ * Stock adjustment (damage, recounts, corrections): a movement with NO invoice.
+ * Purchases and sales have their own pages because they create invoices.
+ * It deliberately does NOT update the table: the change
  * arrives via the SSE stream like it does for every other open window, so
  * there is a single update path and no optimistic state to reconcile.
  */
@@ -77,8 +77,12 @@ export function MovementForm({ products }: { products: Product[] }) {
     >
       <header className="border-b border-slate-200 px-5 py-4">
         <h2 id={`${ids}-heading`} className="text-base font-semibold text-slate-900">
-          Record stock movement
+          Stock adjustment
         </h2>
+        <p className="mt-0.5 text-xs text-slate-500">
+          Damage, recounts and corrections. No invoice is created; use Purchases or Sales for
+          those.
+        </p>
       </header>
 
       <form onSubmit={handleSubmit} className="px-5 py-4">
@@ -162,7 +166,7 @@ export function MovementForm({ products }: { products: Product[] }) {
             type="submit"
             className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {submitting ? 'Recording…' : 'Record movement'}
+            {submitting ? 'Recording…' : 'Record adjustment'}
           </button>
         </fieldset>
 

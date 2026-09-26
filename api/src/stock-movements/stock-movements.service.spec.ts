@@ -6,6 +6,7 @@ import {
   STOCK_QUANTITY_MAX,
 } from '../common/constants';
 import {
+  MovementReason,
   MovementType,
   Prisma,
   Product,
@@ -13,6 +14,7 @@ import {
 } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { STOCK_UPDATED_EVENT } from './events/stock-updated.event';
+import { StockLedgerService } from './stock-ledger.service';
 import { StockMovementsService } from './stock-movements.service';
 
 const PRODUCT_ID = '01990000-0000-7000-8000-000000000001';
@@ -32,6 +34,8 @@ const movement = (type: MovementType, quantity: number): StockMovement => ({
   productId: PRODUCT_ID,
   type,
   quantity,
+  reason: MovementReason.ADJUSTMENT,
+  invoiceId: null,
   note: null,
   createdAt: new Date('2026-01-01T00:00:00Z'),
 });
@@ -45,7 +49,10 @@ describe('StockMovementsService', () => {
         Promise<Product[]>,
         [Prisma.ProductUpdateManyAndReturnArgs]
       >(),
-      count: jest.fn<Promise<number>, [Prisma.ProductCountArgs]>(),
+      findUnique: jest.fn<
+        Promise<{ sku: string; quantity: number } | null>,
+        [Prisma.ProductFindUniqueArgs]
+      >(),
     },
     stockMovement: {
       create: jest.fn<
@@ -75,6 +82,8 @@ describe('StockMovementsService', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         StockMovementsService,
+        // The real ledger: these tests exercise the full adjustment path.
+        StockLedgerService,
         { provide: PrismaService, useValue: prisma },
         { provide: EventEmitter2, useValue: events },
       ],
@@ -104,6 +113,8 @@ describe('StockMovementsService', () => {
           productId: PRODUCT_ID,
           type: MovementType.IN,
           quantity: 5,
+          reason: MovementReason.ADJUSTMENT,
+          invoiceId: undefined,
           note: undefined,
         },
       });
@@ -150,7 +161,7 @@ describe('StockMovementsService', () => {
 
     it('throws 409 "Insufficient stock" and writes nothing when OUT exceeds stock', async () => {
       tx.product.updateManyAndReturn.mockResolvedValue([]);
-      tx.product.count.mockResolvedValue(1);
+      tx.product.findUnique.mockResolvedValue({ sku: 'KB-001', quantity: 2 });
 
       const attempt = service.record({
         productId: PRODUCT_ID,
@@ -167,7 +178,7 @@ describe('StockMovementsService', () => {
 
     it('throws 409 when IN would overflow the quantity column', async () => {
       tx.product.updateManyAndReturn.mockResolvedValue([]);
-      tx.product.count.mockResolvedValue(1);
+      tx.product.findUnique.mockResolvedValue({ sku: 'KB-001', quantity: 2 });
 
       await expect(
         service.record({
@@ -182,7 +193,7 @@ describe('StockMovementsService', () => {
       'throws 404 for an unknown product (%s)',
       async (type) => {
         tx.product.updateManyAndReturn.mockResolvedValue([]);
-        tx.product.count.mockResolvedValue(0);
+        tx.product.findUnique.mockResolvedValue(null);
 
         await expect(
           service.record({ productId: PRODUCT_ID, type, quantity: 1 }),

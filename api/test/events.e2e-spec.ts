@@ -1,4 +1,10 @@
+import { InvoiceResponse } from '../src/invoices/dto/invoice.response';
+import {
+  INVOICE_CREATED_EVENT,
+  InvoiceCreatedEvent,
+} from '../src/invoices/events/invoice-created.event';
 import { ProductResponse } from '../src/products/dto/product.response';
+import { PRODUCT_CREATED_EVENT } from '../src/products/events/product-created.event';
 import { StockMovementResultResponse } from '../src/stock-movements/dto/stock-movement.response';
 import {
   STOCK_UPDATED_EVENT,
@@ -139,6 +145,51 @@ describe('Stock events SSE (e2e)', () => {
     ]);
     expect(payloadOf(a.data).quantity).toBe(12);
     expect(b.data).toBe(a.data);
+  });
+
+  it('pushes invoice.created (and stock.updated) when a purchase commits', async () => {
+    const product = await createProduct(0);
+    const client = await openStream();
+
+    const invoice = await post<InvoiceResponse>(
+      '/purchases',
+      {
+        supplierName: 'Acme',
+        lines: [{ productId: product.id, quantity: 4, unitCost: 2.5 }],
+      },
+      201,
+    );
+
+    const [stock, created] = await Promise.all([
+      client.next(STOCK_UPDATED_EVENT),
+      client.next(INVOICE_CREATED_EVENT),
+    ]);
+    expect(payloadOf(stock.data)).toMatchObject({ quantity: 4 });
+    expect(created.id).toBe(invoice.id);
+    expect(JSON.parse(created.data) as InvoiceCreatedEvent).toEqual({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      type: 'PURCHASE',
+      counterpartyName: 'Acme',
+      date: invoice.date,
+      currency: 'AED',
+      total: '10.00',
+      status: 'NOT_SENT',
+    });
+  });
+
+  it('pushes product.created when a product is added', async () => {
+    const client = await openStream();
+
+    const product = await post<ProductResponse>(
+      '/products',
+      { name: 'New Gadget', sku: 'NEW-1', quantity: 3, price: 12.5 },
+      201,
+    );
+
+    const message = await client.next(PRODUCT_CREATED_EVENT);
+    expect(message.id).toBe(product.id);
+    expect(JSON.parse(message.data)).toEqual(product);
   });
 });
 

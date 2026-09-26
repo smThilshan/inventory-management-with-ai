@@ -5,7 +5,7 @@ import { jsonResponse, mockFetch } from '@/test/mock-fetch';
 import { MovementForm } from './MovementForm';
 
 const quantityInput = () => screen.getByLabelText('Quantity');
-const submitButton = () => screen.getByRole('button', { name: /Record movement|Recording/ });
+const submitButton = () => screen.getByRole('button', { name: /Record adjustment|Recording/ });
 
 function renderForm() {
   const user = userEvent.setup();
@@ -68,7 +68,7 @@ describe('MovementForm', () => {
     expect(quantityInput()).toBeDisabled();
 
     respond(jsonResponse(201, { product: keyboard, movement: stockUpdated(keyboard, 43).movement }));
-    expect(await screen.findByRole('button', { name: 'Record movement' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Record adjustment' })).toBeEnabled();
   });
 
   it('sends the movement and resets quantity and note on success, keeping the product', async () => {
@@ -81,7 +81,7 @@ describe('MovementForm', () => {
     const user = renderForm();
 
     await user.selectOptions(screen.getByLabelText('Product'), monitor.id);
-    await user.click(screen.getByLabelText('IN (restock)'));
+    await user.click(screen.getByLabelText('IN (add)'));
     await user.type(quantityInput(), '5');
     await user.type(screen.getByLabelText(/Note/), '  Supplier delivery  ');
     await user.click(submitButton());

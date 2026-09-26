@@ -1,5 +1,9 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { StockMovementResponse } from '../dto/stock-movement.response';
+import {
+  StockMovementResponse,
+  toStockMovementResponse,
+} from '../dto/stock-movement.response';
+import type { StockMovementResult } from '../stock-ledger.service';
 
 /** Single source of truth for the event name; listeners import it rather than repeating the string. */
 export const STOCK_UPDATED_EVENT = 'stock.updated';
@@ -27,4 +31,17 @@ export class StockUpdatedEvent {
 
   @ApiProperty({ type: StockMovementResponse })
   movement: StockMovementResponse;
+}
+
+/** One mapping for every producer (adjustments, purchases, sales). */
+export function toStockUpdatedEvent({
+  product,
+  movement,
+}: StockMovementResult): StockUpdatedEvent {
+  return {
+    productId: product.id,
+    sku: product.sku,
+    quantity: product.quantity,
+    movement: toStockMovementResponse(movement),
+  };
 }

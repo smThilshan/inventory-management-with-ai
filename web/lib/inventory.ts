@@ -18,6 +18,7 @@ export interface InventorySnapshot {
 
 export type InventoryAction =
   | { type: 'stockUpdated'; event: StockUpdatedEvent }
+  | { type: 'productCreated'; product: Product }
   /** A fresh snapshot, plus events that arrived while it was being fetched. */
   | { type: 'resynced'; snapshot: InventorySnapshot; replay: StockUpdatedEvent[] };
 
@@ -74,6 +75,15 @@ function applyStockUpdate(
   return { ...state, products, lowStock };
 }
 
+/** New products are the newest, so they go last (the table is in creation order). */
+function addProduct(state: InventoryState, product: Product): InventoryState {
+  if (state.products.some((p) => p.id === product.id)) return state; // delivered twice
+  const lowStock = isLowStock(product.quantity, state.threshold)
+    ? [...state.lowStock, toLowStockItem(product)].sort(byUrgency)
+    : state.lowStock;
+  return { ...state, products: [...state.products, product], lowStock };
+}
+
 export function inventoryReducer(
   state: InventoryState,
   action: InventoryAction,
@@ -81,6 +91,8 @@ export function inventoryReducer(
   switch (action.type) {
     case 'stockUpdated':
       return applyStockUpdate(state, action.event);
+    case 'productCreated':
+      return addProduct(state, action.product);
     case 'resynced':
       return action.replay.reduce(
         applyStockUpdate,

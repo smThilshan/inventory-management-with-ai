@@ -24,7 +24,11 @@ coverage/
 
 # local planning notes (not part of the submission)
 PLAN.md
+INVOICING_PLAN.md
 
 # generated Prisma client (rebuilt by `prisma generate` on install)
 api/src/generated/
 !api/.env.test
+
+# generated invoice PDFs (derived from the DB, regenerated on demand)
+api/storage/

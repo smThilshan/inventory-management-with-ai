@@ -1,8 +1,14 @@
 import { Body, Controller, HttpStatus, Post } from '@nestjs/common';
-import { ApiCreatedResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiCreatedResponse,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { ApiErrorResponse } from '../common/swagger/api-error-response.decorator';
 import { API_TAGS } from '../swagger.setup';
 import { CreateStockMovementDto } from './dto/create-stock-movement.dto';
+import { InsufficientStockResponse } from './dto/insufficient-stock.response';
 import {
   StockMovementResultResponse,
   toStockMovementResultResponse,
@@ -17,8 +23,9 @@ export class StockMovementsController {
   @Post()
   @ApiOperation({
     operationId: 'createStockMovement',
-    summary: 'Record an IN or OUT stock movement',
+    summary: 'Record a stock adjustment (IN or OUT, no invoice)',
     description:
+      'For corrections such as damage or recounts; recorded with reason ADJUSTMENT. ' +
       'Atomic: the quantity update and the ledger entry commit together. Concurrent OUTs can ' +
       'never oversell (conditional UPDATE). On success a `stock.updated` event is pushed to ' +
       'GET /events/stock after commit.',
@@ -26,10 +33,12 @@ export class StockMovementsController {
   @ApiCreatedResponse({ type: StockMovementResultResponse })
   @ApiErrorResponse(HttpStatus.BAD_REQUEST, 'Invalid body or unknown fields')
   @ApiErrorResponse(HttpStatus.NOT_FOUND, 'Product not found')
-  @ApiErrorResponse(
-    HttpStatus.CONFLICT,
-    'Insufficient stock (OUT), or stock quantity limit exceeded (IN)',
-  )
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description:
+      'Insufficient stock for an OUT (with sku, requested, available), or stock quantity limit exceeded for an IN',
+    type: InsufficientStockResponse,
+  })
   async create(
     @Body() dto: CreateStockMovementDto,
   ): Promise<StockMovementResultResponse> {

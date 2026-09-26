@@ -2,27 +2,44 @@
 
 import { useEffect, useEffectEvent, useState } from 'react';
 import { api } from '@/lib/api';
-import { STOCK_UPDATED_EVENT, STREAM_RETRY_MS } from '@/lib/constants';
-import type { StockUpdatedEvent } from '@/lib/types';
+import {
+  INVOICE_CREATED_EVENT,
+  PRODUCT_CREATED_EVENT,
+  STOCK_UPDATED_EVENT,
+  STREAM_RETRY_MS,
+} from '@/lib/constants';
+import type { InvoiceCreatedEvent, Product, StockUpdatedEvent } from '@/lib/types';
 
 export type StreamStatus = 'connecting' | 'live' | 'reconnecting';
 
 interface StockStreamHandlers {
-  onUpdate: (event: StockUpdatedEvent) => void;
+  onUpdate?: (event: StockUpdatedEvent) => void;
+  onInvoiceCreated?: (event: InvoiceCreatedEvent) => void;
+  onProductCreated?: (product: Product) => void;
   /** Called every time the stream (re)opens: events may have been missed while it was down. */
-  onOpen: () => void;
+  onOpen?: () => void;
 }
 
 /**
- * One EventSource for the whole dashboard. Each open EventSource holds an HTTP
- * connection, and browsers allow only ~6 per origin on HTTP/1.1.
+ * One EventSource per page for all live events (`stock.updated`,
+ * `invoice.created`). Each open EventSource holds an HTTP connection, and
+ * browsers allow only ~6 per origin on HTTP/1.1.
  */
-export function useStockStream({ onUpdate, onOpen }: StockStreamHandlers): StreamStatus {
+export function useStockStream({
+  onUpdate,
+  onInvoiceCreated,
+  onProductCreated,
+  onOpen,
+}: StockStreamHandlers): StreamStatus {
   const [status, setStatus] = useState<StreamStatus>('connecting');
 
   // Latest handlers without re-running the effect (which would reconnect).
-  const handleUpdate = useEffectEvent(onUpdate);
-  const handleOpen = useEffectEvent(onOpen);
+  const handleUpdate = useEffectEvent((event: StockUpdatedEvent) => onUpdate?.(event));
+  const handleInvoiceCreated = useEffectEvent((event: InvoiceCreatedEvent) =>
+    onInvoiceCreated?.(event),
+  );
+  const handleProductCreated = useEffectEvent((product: Product) => onProductCreated?.(product));
+  const handleOpen = useEffectEvent(() => onOpen?.());
 
   useEffect(() => {
     let source: EventSource;
@@ -47,6 +64,14 @@ export function useStockStream({ onUpdate, onOpen }: StockStreamHandlers): Strea
 
       source.addEventListener(STOCK_UPDATED_EVENT, (message) => {
         handleUpdate(JSON.parse((message as MessageEvent<string>).data) as StockUpdatedEvent);
+      });
+      source.addEventListener(PRODUCT_CREATED_EVENT, (message) => {
+        handleProductCreated(JSON.parse((message as MessageEvent<string>).data) as Product);
+      });
+      source.addEventListener(INVOICE_CREATED_EVENT, (message) => {
+        handleInvoiceCreated(
+          JSON.parse((message as MessageEvent<string>).data) as InvoiceCreatedEvent,
+        );
       });
     };
 

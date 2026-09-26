@@ -65,6 +65,7 @@ web 3000 · api 3001 · postgres 5432 · redis 6379
 
 ## Don't
 - Don't add auth or extra features unless PLAN.md says so.
+- Invoicing (purchases, sales, invoice PDFs) is an approved extension; follow `INVOICING_PLAN.md` (local, gitignored) phase by phase.
 - Swagger/OpenAPI (`/docs`, `/docs-json`) was added at the user's request. Keep it: every new DTO/response class needs `@ApiProperty` using the same constants as its validators, and every route needs an `operationId` (enforced by `test/docs.e2e-spec.ts`).
 - Don't use Redis for anything except the low-stock cache (the brief asks for ONE clear purpose).
 - Don't skip or delete failing tests to make a phase pass.

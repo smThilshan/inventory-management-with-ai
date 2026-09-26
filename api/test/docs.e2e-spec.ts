@@ -68,6 +68,12 @@ describe('API docs (e2e)', () => {
       listLowStockProducts: 'GET /products/low-stock',
       createStockMovement: 'POST /stock-movements',
       listProductMovements: 'GET /products/{productId}/movements',
+      createPurchase: 'POST /purchases',
+      createSale: 'POST /sales',
+      listInvoices: 'GET /invoices',
+      getInvoice: 'GET /invoices/{id}',
+      getInvoicePdf: 'GET /invoices/{id}/pdf',
+      getInvoicingSettings: 'GET /invoicing/settings',
       streamStockEvents: 'GET /events/stock',
     });
     expect(operations().every((op) => (op.tags ?? []).length > 0)).toBe(true);
@@ -156,6 +162,32 @@ describe('API docs (e2e)', () => {
       );
       expect(Object.keys(result.movement).sort()).toEqual(
         documentedFields('StockMovementResponse'),
+      );
+    });
+
+    it('InvoiceResponse and InvoiceLineResponse (POST /purchases)', async () => {
+      const http = () => request(ctx.app.getHttpServer());
+      const product = (
+        await http()
+          .post('/products')
+          .send({ name: 'Doc', sku: 'DOC-2', price: 1 })
+          .expect(201)
+      ).body as ProductResponse;
+      const invoice = (
+        await http()
+          .post('/purchases')
+          .send({
+            supplierName: 'Doc Supplier',
+            lines: [{ productId: product.id, quantity: 1, unitCost: 1 }],
+          })
+          .expect(201)
+      ).body as { lines: object[] };
+
+      expect(Object.keys(invoice).sort()).toEqual(
+        documentedFields('InvoiceResponse'),
+      );
+      expect(Object.keys(invoice.lines[0]).sort()).toEqual(
+        documentedFields('InvoiceLineResponse'),
       );
     });
   });

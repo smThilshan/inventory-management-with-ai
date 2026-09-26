@@ -5,6 +5,10 @@ import {
   SSE_HEARTBEAT_INTERVAL_MS,
 } from '../common/constants';
 import {
+  INVOICE_CREATED_EVENT,
+  InvoiceCreatedEvent,
+} from '../invoices/events/invoice-created.event';
+import {
   STOCK_UPDATED_EVENT,
   StockUpdatedEvent,
 } from '../stock-movements/events/stock-updated.event';
@@ -19,6 +23,8 @@ const event: StockUpdatedEvent = {
     productId: 'product-1',
     type: 'OUT',
     quantity: 3,
+    reason: 'ADJUSTMENT',
+    invoiceId: null,
     note: null,
     createdAt: '2026-01-01T00:00:00.000Z',
   },
@@ -61,6 +67,28 @@ describe('StockStreamService', () => {
 
     expect(client.messages).toEqual([
       { type: STOCK_UPDATED_EVENT, id: 'movement-1', data: event },
+    ]);
+  });
+
+  it('forwards invoice.created as a second named event, in order with stock updates', () => {
+    const client = collect();
+    const invoiceEvent: InvoiceCreatedEvent = {
+      id: 'invoice-1',
+      invoiceNumber: 'SAL-2026-0001',
+      type: 'SALE',
+      counterpartyName: 'Buyer',
+      date: '2026-09-25',
+      currency: 'AED',
+      total: '10.00',
+      status: 'NOT_SENT',
+    };
+
+    service.publish(event);
+    service.publishInvoiceCreated(invoiceEvent);
+
+    expect(client.messages).toEqual([
+      { type: STOCK_UPDATED_EVENT, id: 'movement-1', data: event },
+      { type: INVOICE_CREATED_EVENT, id: 'invoice-1', data: invoiceEvent },
     ]);
   });
 

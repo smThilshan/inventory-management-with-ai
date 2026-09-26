@@ -13,6 +13,25 @@ enum MovementType {
   OUT
 }
 
+/// Why stock moved. PURCHASE/SALE always link to an invoice; ADJUSTMENT never does.
+enum MovementReason {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+}
+
+enum InvoiceType {
+  PURCHASE
+  SALE
+}
+
+/// Accounting sync state (Task 2 pushes invoices to Xero).
+enum InvoiceStatus {
+  NOT_SENT
+  SENT
+  POSTED
+}
+
 /// quantity >= 0 and price > 0 are enforced by CHECK constraints in the init migration.
 model Product {
   id        String   @id @default(uuid(7)) @db.Uuid
@@ -23,23 +42,93 @@ model Product {
   createdAt DateTime @default(now()) @db.Timestamptz(3)
   updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
-  movements StockMovement[]
+  movements    StockMovement[]
+  invoiceLines InvoiceLine[]
 
   @@index([quantity])
 }
 
 /// Append-only ledger: every change to Product.quantity writes one row here.
-/// quantity > 0 is enforced by a CHECK constraint; direction comes from `type`.
+/// CHECKs: quantity > 0; reason/invoice/type consistency (see the invoicing migration).
 model StockMovement {
-  id        String       @id @default(uuid(7)) @db.Uuid
-  productId String       @db.Uuid
+  id        String         @id @default(uuid(7)) @db.Uuid
+  productId String         @db.Uuid
   type      MovementType
   quantity  Int
-  note      String?      @db.VarChar(255)
-  createdAt DateTime     @default(now()) @db.Timestamptz(3)
+  reason    MovementReason @default(ADJUSTMENT)
+  invoiceId String?        @db.Uuid
+  note      String?        @db.VarChar(255)
+  createdAt DateTime       @default(now()) @db.Timestamptz(3)
 
-  // Restrict: deleting a product must never silently erase its stock history.
-  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  // Restrict: deleting a product or invoice must never silently erase stock history.
+  product Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  invoice Invoice? @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
 
   @@index([productId, createdAt])
+  @@index([invoiceId])
+}
+
+/// One purchase or sale = one invoice = many lines = many stock movements.
+/// Money CHECKs (non-negative, total = subtotal + taxAmount) live in the invoicing migration.
+model Invoice {
+  id               String        @id @default(uuid(7)) @db.Uuid
+  invoiceNumber    String        @unique @db.VarChar(32)
+  type             InvoiceType
+  status           InvoiceStatus @default(NOT_SENT)
+  /// Supplier for PURCHASE, customer for SALE.
+  counterpartyName String        @db.VarChar(120)
+  /// Our company as printed on the invoice (snapshot of COMPANY_NAME/ADDRESS at issue time),
+  /// so a PDF regenerated years later still shows the issuer's details from that day.
+  companyName      String        @db.VarChar(255)
+  companyAddress   String        @db.VarChar(255)
+  /// Calendar dates (no time/timezone) to avoid off-by-one-day bugs.
+  date             DateTime      @db.Date
+  dueDate          DateTime      @db.Date
+  /// ISO 4217 code, e.g. AED.
+  currency         String        @db.Char(3)
+  subtotal         Decimal       @db.Decimal(12, 2)
+  taxRate          Decimal       @db.Decimal(5, 4)
+  taxAmount        Decimal       @db.Decimal(12, 2)
+  total            Decimal       @db.Decimal(12, 2)
+  createdAt        DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime      @updatedAt @db.Timestamptz(3)
+
+  lines     InvoiceLine[]
+  movements StockMovement[]
+
+  @@index([type, status])
+  @@index([createdAt])
+}
+
+/// Snapshots (description, sku, unitPrice) freeze the line as issued, so an
+/// invoice never changes when its product is later renamed or repriced.
+model InvoiceLine {
+  id          String  @id @default(uuid(7)) @db.Uuid
+  invoiceId   String  @db.Uuid
+  /// 1..n: stable order for the PDF's "#" column.
+  lineNumber  Int
+  productId   String  @db.Uuid
+  description String  @db.VarChar(120)
+  sku         String  @db.VarChar(32)
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(12, 2)
+  lineTotal   Decimal @db.Decimal(12, 2)
+
+  // Invoices are legal documents: never cascade-delete them or their lines.
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([invoiceId, lineNumber])
+  @@index([productId])
+}
+
+/// Per-type, per-year counter for gap-free invoice numbers (PUR-2026-0001).
+/// Incremented with a row-locking UPDATE inside the invoice transaction.
+model InvoiceSequence {
+  id         String      @id @default(uuid(7)) @db.Uuid
+  type       InvoiceType
+  year       Int
+  lastNumber Int         @default(0)
+
+  @@unique([type, year])
 }

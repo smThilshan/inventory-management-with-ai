@@ -1,8 +1,8 @@
 import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { InventorySnapshot } from '@/lib/inventory';
-import { STOCK_UPDATED_EVENT } from '@/lib/constants';
-import { keyboard, monitor, mouse, snapshot, stockUpdated } from '@/test/fixtures';
+import { PRODUCT_CREATED_EVENT, STOCK_UPDATED_EVENT } from '@/lib/constants';
+import { keyboard, monitor, mouse, product, snapshot, stockUpdated } from '@/test/fixtures';
 import { MockEventSource } from '@/test/mock-event-source';
 import { jsonResponse, mockFetch } from '@/test/mock-fetch';
 import { InventoryDashboard } from './InventoryDashboard';
@@ -126,6 +126,18 @@ describe('InventoryDashboard', () => {
     }
   });
 
+  it('adds a newly created product live (product.created), including to low stock', async () => {
+    const { source } = await renderLiveDashboard();
+    const gadget = product({ id: 'p-gadget', name: 'New Gadget', sku: 'NEW-1', quantity: 2 });
+
+    act(() => source.emit(PRODUCT_CREATED_EVENT, gadget));
+    act(() => source.emit(PRODUCT_CREATED_EVENT, gadget)); // duplicates are ignored
+
+    expect(screen.getAllByRole('row', { name: /New Gadget/ })).toHaveLength(1);
+    expect(row(/New Gadget/)).toHaveAttribute('data-changed', 'true');
+    expect(within(lowStockPanel()).getByText('New Gadget')).toBeInTheDocument();
+  });
+
   it('closes the stream on unmount', async () => {
     const { source, unmount } = await renderLiveDashboard();
 
@@ -139,7 +151,7 @@ describe('InventoryDashboard', () => {
     const { source } = await renderLiveDashboard();
 
     await user.type(screen.getByLabelText('Quantity'), '3');
-    await user.click(screen.getByRole('button', { name: 'Record movement' }));
+    await user.click(screen.getByRole('button', { name: 'Record adjustment' }));
     expect(await screen.findByText(/Recorded OUT 3/)).toBeInTheDocument();
     expect(within(row(/Mechanical Keyboard/)).getByText('45')).toBeInTheDocument();
 

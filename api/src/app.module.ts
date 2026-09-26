@@ -4,9 +4,12 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { AppConfigModule } from './config/config.module';
 import { EventsModule } from './events/events.module';
+import { InvoicesModule } from './invoices/invoices.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PurchasesModule } from './purchases/purchases.module';
 import { ProductsModule } from './products/products.module';
 import { RedisModule } from './redis/redis.module';
+import { SalesModule } from './sales/sales.module';
 import { StockMovementsModule } from './stock-movements/stock-movements.module';
 
 @Module({
@@ -17,6 +20,9 @@ import { StockMovementsModule } from './stock-movements/stock-movements.module';
     RedisModule,
     ProductsModule,
     StockMovementsModule,
+    InvoicesModule,
+    PurchasesModule,
+    SalesModule,
     EventsModule,
   ],
   providers: [
