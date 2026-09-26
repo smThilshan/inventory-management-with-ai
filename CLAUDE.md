@@ -43,7 +43,7 @@ web 3000 · api 3001 · postgres 5432 · redis 6379
 ## Commands (root)
 - `docker compose up -d`: start Postgres + Redis
 - `npm run dev`: api + web together (concurrently)
-- `npm run db:migrate` / `npm run db:seed`
+- `npm run db:migrate` / `npm run db:seed` (seed is tsc-compiled: it boots the Nest app, which needs decorator metadata)
 - `npm test`: all unit tests · `npm run test:e2e`: api e2e
 
 ## Code rules

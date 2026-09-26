@@ -21,8 +21,8 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
-    "db:seed": "prisma db seed",
-    "db:reset": "prisma migrate reset && prisma db seed",
+    "db:seed": "tsc -p tsconfig.seed.json && node dist-seed/prisma/seed.js",
+    "db:reset": "prisma migrate reset && npm run db:seed",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

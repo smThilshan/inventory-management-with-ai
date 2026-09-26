@@ -1,0 +1,13 @@
+{
+  // Compiles prisma/seed.ts (and the src it imports) with tsc, which emits the
+  // decorator metadata Nest's dependency injection needs (tsx/esbuild does not).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist-seed",
+    "rootDir": ".",
+    "incremental": false,
+    "declaration": false,
+    "sourceMap": false
+  },
+  "include": ["prisma/seed.ts"]
+}

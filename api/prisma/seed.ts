@@ -1,7 +1,25 @@
-import 'dotenv/config';
-import { PrismaPg } from '@prisma/adapter-pg';
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from '../src/app.module';
+import {
+  addDays,
+  formatCalendarDate,
+  parseCalendarDate,
+  todayIn,
+} from '../src/common/calendar-date';
 import { OPENING_STOCK_NOTE } from '../src/common/constants';
-import { MovementType, PrismaClient } from '../src/generated/prisma/client';
+import { InvoiceType, MovementType } from '../src/generated/prisma/client';
+import { InvoiceIssuerService } from '../src/invoices/invoice-issuer.service';
+import { InvoiceSettings } from '../src/invoices/invoice-settings';
+import { PrismaService } from '../src/prisma/prisma.service';
+
+/*
+ * Seeds demo data through the REAL application code: the Nest app is booted
+ * (same config validation, same services), so seeded invoices get genuine
+ * numbers, totals, ledger movements and PDFs; nothing is hand-inserted.
+ * Compiled with tsc (see tsconfig.seed.json) because Nest DI needs decorator
+ * metadata, which esbuild-based runners such as tsx do not emit.
+ */
 
 interface SeedProduct {
   name: string;
@@ -30,7 +48,9 @@ const PRODUCTS: readonly SeedProduct[] = [
   { name: 'HD Webcam', sku: 'CAM-HD-006', quantity: 22, price: '59.00' },
 ];
 
-async function seed(prisma: PrismaClient): Promise<void> {
+async function seedProducts(
+  prisma: PrismaService,
+): Promise<Map<string, string>> {
   for (const { quantity, ...product } of PRODUCTS) {
     // Upsert on SKU keeps the seed idempotent: re-running never duplicates data.
     // The opening IN movement keeps the ledger consistent with Product.quantity.
@@ -53,24 +73,78 @@ async function seed(prisma: PrismaClient): Promise<void> {
       },
     });
   }
+  const products = await prisma.product.findMany({
+    select: { id: true, sku: true },
+  });
+  return new Map(products.map((p) => [p.sku, p.id]));
+}
+
+/** 2 purchases and 1 sale, dated in the recent past so the invoice list is not empty. */
+async function seedInvoices(
+  issuer: InvoiceIssuerService,
+  idOf: (sku: string) => string,
+  daysAgo: (days: number) => string,
+): Promise<void> {
+  await issuer.issue({
+    type: InvoiceType.PURCHASE,
+    counterpartyName: 'Gulf Tech Distributors',
+    date: daysAgo(7),
+    lines: [
+      { productId: idOf('KB-MECH-001'), quantity: 10, unitPrice: '45.00' },
+      { productId: idOf('MS-WL-002'), quantity: 25, unitPrice: '12.50' },
+    ],
+  });
+  await issuer.issue({
+    type: InvoiceType.PURCHASE,
+    counterpartyName: 'Emirates Office Supplies',
+    date: daysAgo(3),
+    lines: [
+      { productId: idOf('CAM-HD-006'), quantity: 10, unitPrice: '38.00' },
+      { productId: idOf('DK-USBC-004'), quantity: 2, unitPrice: '110.00' },
+    ],
+  });
+  await issuer.issue({
+    type: InvoiceType.SALE,
+    counterpartyName: 'Al Noor Trading',
+    date: daysAgo(1),
+    lines: [
+      { productId: idOf('KB-MECH-001'), quantity: 2 },
+      { productId: idOf('MS-WL-002'), quantity: 4 },
+    ],
+  });
 }
 
 async function main(): Promise<void> {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error('DATABASE_URL is not set');
-  }
-
-  const prisma = new PrismaClient({
-    adapter: new PrismaPg({ connectionString }),
+  const app = await NestFactory.createApplicationContext(AppModule, {
+    logger: ['error', 'warn'],
   });
-
   try {
-    await seed(prisma);
-    const count = await prisma.product.count();
-    console.log(`Seed complete: ${count} products in database`);
+    const prisma = app.get(PrismaService);
+    const ids = await seedProducts(prisma);
+
+    // Only when there are no invoices yet, so re-running the seed never duplicates them.
+    if ((await prisma.invoice.count()) === 0) {
+      const today = parseCalendarDate(
+        todayIn(app.get(InvoiceSettings).timeZone),
+      );
+      const idOf = (sku: string): string => {
+        const id = ids.get(sku);
+        if (!id) throw new Error(`Seed product ${sku} is missing`);
+        return id;
+      };
+      await seedInvoices(app.get(InvoiceIssuerService), idOf, (days) =>
+        formatCalendarDate(addDays(today, -days)),
+      );
+    }
+
+    const [products, invoices] = await Promise.all([
+      prisma.product.count(),
+      prisma.invoice.count(),
+    ]);
+    console.log(`Seed complete: ${products} products, ${invoices} invoices`);
   } finally {
-    await prisma.$disconnect();
+    // Also waits for the PDFs being generated for the new invoices.
+    await app.close();
   }
 }
 

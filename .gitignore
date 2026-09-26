@@ -32,3 +32,6 @@ api/src/generated/
 
 # generated invoice PDFs (derived from the DB, regenerated on demand)
 api/storage/
+
+# compiled seed script
+api/dist-seed/
