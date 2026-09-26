@@ -6,11 +6,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { useRecentlyChanged } from '@/hooks/useRecentlyChanged';
 import { useStockStream } from '@/hooks/useStockStream';
 import { api } from '@/lib/api';
-import {
-  ACCOUNTING_SYNC_HINT,
-  CHANGE_HIGHLIGHT_MS,
-  INVOICES_PAGE_SIZE,
-} from '@/lib/constants';
+import { CHANGE_HIGHLIGHT_MS, INVOICES_PAGE_SIZE } from '@/lib/constants';
 import { type InvoiceRow, matchesFilters, mergeRows, toRow } from '@/lib/invoices';
 import type { InvoiceFilters, InvoicePage, InvoiceStatus, InvoiceType } from '@/lib/types';
 import { cardClass, inputClass, labelClass, secondaryButtonClass } from '@/lib/ui';
@@ -160,17 +156,6 @@ export function InvoicesView({ initialPage }: { initialPage: InvoicePage }) {
                       >
                         View PDF
                       </a>
-                      {/* Disabled buttons get no hover events, so the tooltip sits on a wrapper. */}
-                      <span title={ACCOUNTING_SYNC_HINT} className="ml-3 inline-block">
-                        <button
-                          type="button"
-                          disabled
-                          aria-label={`Send ${row.invoiceNumber} to accounting (${ACCOUNTING_SYNC_HINT})`}
-                          className="cursor-not-allowed text-sm font-medium text-slate-400"
-                        >
-                          Send to accounting
-                        </button>
-                      </span>
                     </td>
                   </tr>
                 ))}

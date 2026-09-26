@@ -81,16 +81,13 @@ describe('InvoicesView', () => {
     expect(numbers()).toEqual(['PUR-2026-0002', 'PUR-2026-0001']);
   });
 
-  it('links to the PDF and keeps "Send to accounting" disabled for now', () => {
+  it('links each invoice to its PDF', () => {
     render(<InvoicesView initialPage={firstPage} />);
 
     expect(screen.getByRole('link', { name: 'View PDF for PUR-2026-0001' })).toHaveAttribute(
       'href',
       `http://api.test/invoices/${existing.id}/pdf`,
     );
-    const send = screen.getByRole('button', { name: /Send PUR-2026-0001 to accounting/ });
-    expect(send).toBeDisabled();
-    expect(send.parentElement).toHaveAttribute('title', 'Available in Task 2');
   });
 
   it('loads more with the cursor', async () => {

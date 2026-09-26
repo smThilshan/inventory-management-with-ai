@@ -21,8 +21,6 @@ export const INVOICE_MAX_LINES = 50;
 export const COUNTERPARTY_NAME_MIN_LENGTH = 2;
 export const COUNTERPARTY_NAME_MAX_LENGTH = 120;
 export const INVOICES_PAGE_SIZE = 20;
-/** Shown on the disabled "Send to accounting" action until Task 2 exists. */
-export const ACCOUNTING_SYNC_HINT = 'Available in Task 2';
 
 // Products (mirror the API validation)
 export const PRODUCT_NAME_MAX_LENGTH = 120;
